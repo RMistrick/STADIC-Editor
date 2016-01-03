@@ -1,0 +1,255 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'v1.ui'
+#
+# Created by: PyQt4 UI code generator 4.11.4
+#
+# WARNING! All changes made in this file will be lost!
+from __future__ import print_function
+from PyQt4 import QtCore, QtGui
+import sys
+import json
+import datetime,math,bisect,os,glob
+import re,sys
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
+
+try:
+    _encoding = QtGui.QApplication.UnicodeUTF8
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig, _encoding)
+except AttributeError:
+    def _translate(context, text, disambig):
+        return QtGui.QApplication.translate(context, text, disambig)
+
+class Ui_FormSTADIC(QtGui.QWidget):
+    #Constructor Function
+    def __init__(self):
+        QtGui.QWidget.__init__(self)
+        self.setupUi(self)
+
+    #Add all display attributes.
+    def setupUi(self, FormSTADIC):
+        FormSTADIC.setObjectName(_fromUtf8("FormSTADIC"))
+        FormSTADIC.resize(992, 727)
+        FormSTADIC.setMinimumSize(QtCore.QSize(992, 727))
+        FormSTADIC.setMaximumSize(QtCore.QSize(992, 727))
+        self.TabAnaVLayout_2 = QtGui.QHBoxLayout(FormSTADIC)
+        self.TabAnaVLayout_2.setObjectName(_fromUtf8("TabAnaVLayout_2"))
+        self.FormHLayout = QtGui.QHBoxLayout()
+        self.FormHLayout.setObjectName(_fromUtf8("FormHLayout"))
+        self.STADICLblColVLayout = QtGui.QVBoxLayout()
+        self.STADICLblColVLayout.setObjectName(_fromUtf8("STADICLblColVLayout"))
+        self.STADICMark = QtGui.QLabel(FormSTADIC)
+        self.STADICMark.setMaximumSize(QtCore.QSize(400, 100))
+        font = QtGui.QFont()
+        font.setFamily(_fromUtf8("Impact"))
+        font.setPointSize(24)
+        self.STADICMark.setFont(font)
+        self.STADICMark.setAutoFillBackground(False)
+        self.STADICMark.setTextFormat(QtCore.Qt.RichText)
+        self.STADICMark.setObjectName(_fromUtf8("STADICMark"))
+        self.STADICLblColVLayout.addWidget(self.STADICMark, QtCore.Qt.AlignTop)
+        self.FormHLayout.addLayout(self.STADICLblColVLayout)
+        self.StaticTab = QtGui.QTabWidget(FormSTADIC)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(5)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.StaticTab.sizePolicy().hasHeightForWidth())
+        self.StaticTab.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.StaticTab.setFont(font)
+        self.StaticTab.setMovable(False)
+        self.StaticTab.setObjectName(_fromUtf8("StaticTab"))
+        self.TabFile = QtGui.QWidget()
+        self.TabFile.setObjectName(_fromUtf8("TabFile"))
+        self.TabFileHLayout = QtGui.QHBoxLayout(self.TabFile)
+        self.TabFileHLayout.setObjectName(_fromUtf8("TabFileHLayout"))
+        self.webView = QtWebKit.QWebView(self.TabFile)
+        self.webView.setUrl(QtCore.QUrl(_fromUtf8("about:blank")))
+        self.webView.setObjectName(_fromUtf8("webView"))
+        self.TabFileHLayout.addWidget(self.webView)
+        self.StaticTab.addTab(self.TabFile, _fromUtf8(""))
+        self.FormHLayout.addWidget(self.StaticTab)
+        self.TabAnaVLayout_2.addLayout(self.FormHLayout)
+
+        self.retranslateUi(FormSTADIC)
+        self.StaticTab.setCurrentIndex(0)
+        QtCore.QMetaObject.connectSlotsByName(FormSTADIC)
+        self.readJson()
+
+    def retranslateUi(self, FormSTADIC):
+        FormSTADIC.setWindowTitle(_translate("FormSTADIC", "STADIC", None))
+        self.STADICMark.setText(_translate("FormSTADIC", "<html><head/><body><p>STADIC</p></body></html>", None))
+        self.StaticTab.setTabText(self.StaticTab.indexOf(self.TabFile), _translate("FormSTADIC", "DATA VISUALISATIONS", None))
+
+    def readJson(self):
+        assert len(sys.argv)==3,"The input should be the name of the json file followed by the index of the room"
+        jsonfile,roomindex = sys.argv[1:]
+        with open(jsonfile)as jsondata:
+            jsonobject = json.load(jsondata)
+            print(jsonobject)
+
+
+def proc_spc_file(filename):
+
+        with open(filename,'r') as ptsfile:
+            for lines in ptsfile:
+                yield lines.split()
+
+def proc_head(jsonfile):
+
+
+
+    #Folder of the json file
+    headroot = os.path.dirname(jsonfile)
+    headres = os.path.join(headroot,r'res') #res folder
+    headrad = os.path.join(headroot,r'radbin') #radbin folder
+    headies = os.path.join(headroot,r'ies') #radbin folder
+
+    #Return the full path of the file.
+    headir = lambda filename: os.path.join( os.path.dirname(jsonfile),filename)
+
+    pat_epw = "epw_data_short_file "
+    pat_pts = "sensor_file "
+    pat_res ="res/"
+
+    pat_resonly ="static_system"
+
+     #The files below aren't listed in the json file.
+    pat_flr = "floor_geometry.radbin"
+
+
+    pat_Re_zon = '_zone[0-9].lum.ill\Z' #The pattern is matched specifically towards the end of the string.
+    pat_Re_lumsch = ('[0-9]_Setting_1.txt\Z') #pattern for matching luminaire zone settings file.
+
+
+
+    #Dictionary for storing all the filenames. Will default to none.
+    filedict = dict.fromkeys(('epw','pts','res_main','floor','sig','pwr','shd','zonesill','lumzones','lumtypes'))
+
+    filedict['zonesill']={}#Initialize a dict for storing all the zone filenames.
+    filedict['lumzones']={}#Initialize a dict for storing all the zones
+    filedict['lumtypes']={} #Initialize a dict for storing all the luminaire types.
+
+    #Stage1 : Process from json.
+    with open(jsonfile)as json:
+        for lines in json:
+
+            #Store epw file.
+            if lines.startswith(pat_epw):
+                filedict['epw']=  headir(lines.split()[-1])
+                continue
+
+            if lines.startswith(pat_pts):
+                filedict['pts'] = headir(lines.split()[-1])
+                continue
+
+            if lines.startswith(pat_res):
+                filedict['res_main']=headir(lines.split()[-1])
+                continue
+
+            #This comes into effect in case there are no calculations in the project.
+            if pat_resonly in lines:
+                filedict['res_main']=os.path.join(headroot,lines.split()[-1])
+
+    #Stage2 : Process from res folder
+
+
+
+    for filename in glob.glob(headres+"\*"):
+            #signal dl file
+
+            if pat_flr in filename:
+                filedict['floor']=filename
+                continue
+
+
+
+
+            if re.search(pat_Re_zon,filename):
+
+                zonename = str(int(filename[-9:-8])+1) #Add one to the name of the Zone. ie Make zone0 as zone 1 , zone 1 as zone 2.
+                filedict['zonesill'][zonename]=filename
+                continue
+
+
+    #Stage3: Get floor radbin file.
+    for filename in glob.glob(headrad+"\*"):
+         if pat_flr in filename:
+             filedict['floor']=filename
+             break
+
+    #Stage4: process from ies folder.
+    for filename in glob.glob(headies+"\*"):
+        if 'Layout.txt' in filename:
+            for lines in proc_spc_file(filename):
+                filedict['lumzones'][lines[-2]]={'lumtype':lines[0],'lumquant':int(lines[4])*int(lines[5])}
+
+        if 'Schedule.txt' in filename:
+            for lines in proc_spc_file(filename):
+                filedict['lumtypes'][lines[0]]={'pwrmax':float(lines[4]),'pwrmin':float(lines[5]),'bfmax':float(lines[2]),'bfmin':float(lines[3])}
+
+        if re.search(pat_Re_lumsch,filename):
+            for lines in proc_spc_file(filename):
+               filedict['lumzones'][lines[0]].update({'dim':lines[1]})
+
+    return filedict
+
+with open(r'd:\stadicprojects.txt','w') as stadicfile:
+    count = 1
+    for root,subdir,filenames in os.walk(r'D:\YProj'):
+        for files in filenames:
+            if ".hea" in files and not root.endswith(r"\tmp") and not r'\tmp' in os.path.join(root,files):
+                print('\n'*6,count,":",os.path.join(root,files),'\n',file=stadicfile)
+                count +=1
+
+
+
+                try:
+                    projinfo = proc_head(os.path.join(root,files))
+                    jsonData_Daylight = projinfo['res_main']
+
+                    jsonSummary = ""
+
+                    #Daylight ILL File
+                    jsonSummary += "Daylight ILL_file\n"
+                    jsonSummary += projinfo['res_main']+"\n"
+
+
+                    #Luminaire Type
+                    jsonSummary += "\nLuminaire Types\n"
+                    for keys,values in projinfo['lumtypes'].items():
+                        jsonSummary += "{}: {}\n".format(keys,values)
+
+                    #Luminaires in Zones
+                    jsonSummary += "\nZones: Schedule\n"
+                    for keys,values in projinfo['lumzones'].items():
+                        jsonSummary += "{}: {}\n".format(keys,values)
+
+                    #Ill Files.
+                    jsonSummary += "\nZones: ILL_Files\n"
+                    for keys,values in projinfo['zonesill'].items():
+                        jsonSummary += "{}: {}\n".format(keys,values)
+
+                            #Ill Files.
+
+
+                    print(jsonSummary,file=stadicfile)
+                except:
+                    print(sys.exc_info())
+                    print(os.path.join(root,files))
+
+            continue
+from PyQt4 import QtWebKit
+
+if __name__=="__main__":
+    app=QtGui.QApplication(sys.argv)
+    ex=Ui_FormSTADIC()
+    ex.show()
+
+    sys.exit(app.exec_())
